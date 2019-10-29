@@ -1,4 +1,4 @@
-import sys 
+import sys
 from pyspark.sql.functions import *
 from pyspark.sql import Row
 from pyspark.sql import SparkSession
@@ -7,7 +7,7 @@ from AQPython.Annotation import *
 spark = SparkSession.builder.getOrCreate()
 
 def FilterProperty(df, name, value="", valueArr=[], valueCompare="=", limit=0, negate=False):
-  """Provide the ability to filter a Dataframe of AQAnnotations based on the value matching the specified property value in the map. 
+  """Provide the ability to filter a Dataframe of AQAnnotations based on the value matching the specified property value in the map.
 
   Args:
     df: Dataframe of AQAnnotations that will be filtered by the specified property name and value.
@@ -21,29 +21,29 @@ def FilterProperty(df, name, value="", valueArr=[], valueCompare="=", limit=0, n
   Returns:
     Dataframe of AQAnnotations
 
-  """ 
+  """
   query = ""
-  
+
   if value != "":
-    
+
     query += ("properties.`" + name + "` " + valueCompare + " '" + value  + "'")
-    
+
   elif len(valueArr) > 0:
-    
+
     if valueCompare == '=':
-      
+
       query += ("properties.`" + name + "` in " + "('" + "','".join(map(str,valueArr)) + "')")
-      
+
     else:
-      
+
       query += ("properties.`" + name + "` not in " + "('" + "','".join(map(str,valueArr)) + "')")
-      
+
   if negate:
-    
+
     query = "!(" + query + ")"
-    
+
   results = df.filter(query)
-  
+
   if limit > 0:
     results = results.limit(limit)
 
@@ -51,7 +51,7 @@ def FilterProperty(df, name, value="", valueArr=[], valueCompare="=", limit=0, n
 
 
 def RegexProperty(df, name, regex, limit=0, negate=False):
-  """Provide the ability to filter a Dataframe of AQAnnotations based on the regex applied to the specified property value in the map. 
+  """Provide the ability to filter a Dataframe of AQAnnotations based on the regex applied to the specified property value in the map.
 
   Args:
     df: Dataframe of AQAnnotations that will be filtered by the specified property name and regex expression.
@@ -63,20 +63,20 @@ def RegexProperty(df, name, regex, limit=0, negate=False):
   Returns:
     Dataframe of AQAnnotations
 
-  """ 
+  """
   query = "properties.`" + name + "` rlike " + "'" + regex + "'"
 
   if negate:
-    
+
     query = "!(" + query + ")"
-    
+
   results = df.filter(query)
-  
+
   if limit > 0:
-    
+
     results = results.limit(limit)
 
-  return results   
+  return results
 
 
 def FilterSet(df, annotSet="", annotSetArr=[], annotSetCompare="=", limit=0, negate=False):
@@ -93,31 +93,31 @@ def FilterSet(df, annotSet="", annotSetArr=[], annotSetCompare="=", limit=0, neg
   Returns:
       Dataframe of AQAnnotations
 
-  """  
+  """
   query = ""
-  
+
   if annotSet != "":
-    
+
     query += ("annotSet " + annotSetCompare + " \"" + annotSet.lower() + "\"")
-    
+
   elif len(annotSetArr) > 0:
-    
+
       if annotSetCompare == "=":
-        
+
         query += ("annotSet in " + "('" + "','".join(map(str,annotSetArr)).lower() + "')")
-        
+
       else:
-        
+
         query += ("annotSet not in " + "('" + "','".join(map(str,annotSetArr)).lower() + "')")
 
   if negate:
-    
+
     query = "!(" + query + ")"
-    
+
   results = df.filter(query)
-  
+
   if limit > 0:
-    
+
     results = results.limit(limit)
 
   return results
@@ -137,43 +137,43 @@ def FilterType(df, annotType="", annotTypeArr=[], annotTypeCompare="=", limit=0,
   Returns:
     Dataframe of AQAnnotations
 
-  """ 
+  """
   query = ""
-  
+
   if annotType != "":
-    
+
     query += ("annotType " + annotTypeCompare + " \"" + annotType.lower() + "\"")
-    
+
   elif len(annotTypeArr) > 0:
-    
+
       if annotTypeCompare == "=":
-        
+
         query += ("annotType in " + "('" + "','".join(map(str,annotTypeArr)).lower() + "')")
-        
+
       else:
-        
+
         query += ("annotType not in " + "('" + "','".join(map(str,annotTypeArr)).lower() + "')")
 
   if negate:
-    
+
     query = "!(" + query + ")"
-    
+
   results = df.filter(query)
-  
+
   if limit > 0:
-    
+
     results = results.limit(limit)
 
   return results
 
 
 def Contains(left, right, limit=0, negate=False):
-  """Provide the ability to find annotations that contain another annotation. 
+  """Provide the ability to find annotations that contain another annotation.
 
-    The input is 2 Dataframes of AQAnnotations. We will call them A and B. 
-    The purpose is to find those annotations in A that contain B. What that means is the start/end offset for an annotation from A must contain the start/end offset from an annotation in B. 
-    The start/end offsets are inclusive.  We ultimately return the container annotations (A) that meet this criteria. 
-    We also deduplicate the A annotations as there could be many annotations from B that could be contained by an annotation in A but it only makes sense to return the unique container annotations. 
+    The input is 2 Dataframes of AQAnnotations. We will call them A and B.
+    The purpose is to find those annotations in A that contain B. What that means is the start/end offset for an annotation from A must contain the start/end offset from an annotation in B.
+    The start/end offsets are inclusive.  We ultimately return the container annotations (A) that meet this criteria.
+    We also deduplicate the A annotations as there could be many annotations from B that could be contained by an annotation in A but it only makes sense to return the unique container annotations.
     There is also the option of negating the query (think Not Contains) so that we return only A where it does not contain B.
 
   Args:
@@ -185,35 +185,39 @@ def Contains(left, right, limit=0, negate=False):
   Returns:
     Dataframe of AQAnnotations
 
-  """  
+  """
   results = None
-  
+
+  # Workaround for Catalyst optimization issues when working with two Dataframes derived from the same Dataframe - Catalyst gets confused
+  tmpRight = right.select("annotId", "annotSet", "annotType", "docId", "endOffset", "startOffset", "properties") \
+                  .toDF("R_annotId", "R_annotSet", "R_annotType", "R_docId", "R_endOffset", "R_startOffset", 'R_properties')
+
   if negate:
-    
-    results = left.alias("L").join(right.alias("R"), 
-                                   ((col("L.docId") == col("R.docId")) & 
-                                    (col("L.startOffset") <= col("R.startOffset")) & 
-                                    (col("L.endOffset") >= col("R.endOffset")) & 
-                                    (~((col("L.annotSet") == col("R.annotSet")) & 
-                                     (col("L.annotType") == col("R.annotType")) & 
-                                     (col("L.startOffset") == col("R.startOffset")) & 
-                                     (col("L.endOffset") == col("R.endOffset"))))),"leftouter") \
-                             .filter(col("R.docId").isNull()) \
-                             .select("L.*") 
-    
+
+    results = left.alias("L").join(tmpRight,
+                                   ((col("L.docId") == col("R_docId")) &
+                                    (col("L.startOffset") <= col("R_startOffset")) &
+                                    (col("L.endOffset") >= col("R_endOffset")) &
+                                    (~((col("L.annotSet") == col("R_annotSet")) &
+                                     (col("L.annotType") == col("R_annotType")) &
+                                     (col("L.startOffset") == col("R_startOffset")) &
+                                     (col("L.endOffset") == col("R_endOffset"))))),"leftouter") \
+                             .filter(col("R_docId").isNull()) \
+                             .select("L.*")
+
   else:
-    
-    results = left.alias("L").join(right.alias("R"), 
-                                   ((col("L.docId") == col("R.docId")) & 
-                                    (col("L.startOffset") <= col("R.startOffset")) & 
-                                    (col("L.endOffset") >= col("R.endOffset")) & 
-                                    (~((col("L.annotSet") == col("R.annotSet")) & 
-                                     (col("L.annotType") == col("R.annotType")) & 
-                                     (col("L.startOffset") == col("R.startOffset")) & 
-                                     (col("L.endOffset") == col("R.endOffset"))))),"leftsemi")
-    
+
+    results = left.alias("L").join(tmpRight,
+                                   ((col("L.docId") == col("R_docId")) &
+                                    (col("L.startOffset") <= col("R_startOffset")) &
+                                    (col("L.endOffset") >= col("R_endOffset")) &
+                                    (~((col("L.annotSet") == col("R_annotSet")) &
+                                     (col("L.annotType") == col("R_annotType")) &
+                                     (col("L.startOffset") == col("R_startOffset")) &
+                                     (col("L.endOffset") == col("R_endOffset"))))),"leftsemi")
+
   if limit > 0:
-    
+
     results = results.limit(limit)
 
   return results
@@ -221,14 +225,14 @@ def Contains(left, right, limit=0, negate=False):
 
 
 def ContainedIn(left, right, limit=0, negate=False):
-  """Provide the ability to find annotations that are contained by another annotation. 
+  """Provide the ability to find annotations that are contained by another annotation.
 
-    The input is 2 Dataframes of AQAnnotations. We will call them A and B. 
-    The purpose is to find those annotations in A that are contained in B. 
-    What that means is the start/end offset for an annotation from A must be contained by the start/end offset from an annotation in B. 
-    The start/end offsets are inclusive.  We ultimately return the contained annotations (A) that meet this criteria. 
+    The input is 2 Dataframes of AQAnnotations. We will call them A and B.
+    The purpose is to find those annotations in A that are contained in B.
+    What that means is the start/end offset for an annotation from A must be contained by the start/end offset from an annotation in B.
+    The start/end offsets are inclusive.  We ultimately return the contained annotations (A) that meet this criteria.
     There is also the option of negating the query (think Not Contains) so that we return only A where it is not contained in B.
-  
+
   Args:
     left: Dataframe of AQAnnotations, the ones we will return if they are contained in AQAnnotations from 'right'.
     right: Dataframe of AQAnnotations, the ones we are looking to see if they contain AQAnnotations from 'left'.
@@ -238,50 +242,54 @@ def ContainedIn(left, right, limit=0, negate=False):
   Returns:
     Dataframe of AQAnnotations
 
-  """  
+  """
   results = None
-  
+
+  # Workaround for Catalyst optimization issues when working with two Dataframes derived from the same Dataframe - Catalyst gets confused
+  tmpRight = right.select("annotId", "annotSet", "annotType", "docId", "endOffset", "startOffset", "properties") \
+                  .toDF("R_annotId", "R_annotSet", "R_annotType", "R_docId", "R_endOffset", "R_startOffset", 'R_properties')
+
   if negate:
-    
-    results = left.alias("L").join(right.alias("R"), 
-                                   ((col("L.docId") == col("R.docId")) & 
-                                    (col("L.startOffset") >= col("R.startOffset")) & 
-                                    (col("L.endOffset") <= col("R.endOffset")) & 
-                                    (~((col("L.annotSet") == col("R.annotSet")) & 
-                                     (col("L.annotType") == col("R.annotType")) & 
-                                     (col("L.startOffset") == col("R.startOffset")) & 
-                                     (col("L.endOffset") == col("R.endOffset"))))),"leftouter") \
-                             .filter(col("R.docId").isNull()) \
-                             .select("L.*") 
-    
+
+    results = left.alias("L").join(tmpRight,
+                                   ((col("L.docId") == col("R_docId")) &
+                                    (col("L.startOffset") >= col("R_startOffset")) &
+                                    (col("L.endOffset") <= col("R_endOffset")) &
+                                    (~((col("L.annotSet") == col("R_annotSet")) &
+                                     (col("L.annotType") == col("R_annotType")) &
+                                     (col("L.startOffset") == col("R_startOffset")) &
+                                     (col("L.endOffset") == col("R_endOffset"))))),"leftouter") \
+                             .filter(col("R_docId").isNull()) \
+                             .select("L.*")
+
   else:
-    
-    results = left.alias("L").join(right.alias("R"), 
-                                   ((col("L.docId") == col("R.docId")) & 
-                                    (col("L.startOffset") >= col("R.startOffset")) & 
-                                    (col("L.endOffset") <= col("R.endOffset")) & 
-                                    (~((col("L.annotSet") == col("R.annotSet")) & 
-                                     (col("L.annotType") == col("R.annotType")) & 
-                                     (col("L.startOffset") == col("R.startOffset")) & 
-                                     (col("L.endOffset") == col("R.endOffset"))))),"leftsemi")
-    
+
+    results = left.alias("L").join(tmpRight,
+                                   ((col("L.docId") == col("R_docId")) &
+                                    (col("L.startOffset") >= col("R_startOffset")) &
+                                    (col("L.endOffset") <= col("R_endOffset")) &
+                                    (~((col("L.annotSet") == col("R_annotSet")) &
+                                     (col("L.annotType") == col("R_annotType")) &
+                                     (col("L.startOffset") == col("R_startOffset")) &
+                                     (col("L.endOffset") == col("R_endOffset"))))),"leftsemi")
+
   if limit > 0:
-    
+
     results = results.limit(limit)
 
   return results
 
 
 def Before(left, right, dist=sys.maxsize , limit=0, negate=False):
-  """Provide the ability to find annotations that are before another annotation. 
+  """Provide the ability to find annotations that are before another annotation.
 
-    The input is 2 Dataframes of AQAnnotations. We will call them A and B. 
-    The purpose is to find those annotations in A that are before B. 
-    What that means is the end offset for an annotation from A must be before (or equal to) the start offset from an annotation in B. 
-    We ultimately return the A annotations that meet this criteria. 
-    A distance operator can also be optionally specified. 
-    This would require an A annotation (endOffset) to occur n characters (or less) before the B annotation (startOffset). 
-    There is also the option of negating the query (think Not Before) so that we return only A where it is not before B. 
+    The input is 2 Dataframes of AQAnnotations. We will call them A and B.
+    The purpose is to find those annotations in A that are before B.
+    What that means is the end offset for an annotation from A must be before (or equal to) the start offset from an annotation in B.
+    We ultimately return the A annotations that meet this criteria.
+    A distance operator can also be optionally specified.
+    This would require an A annotation (endOffset) to occur n characters (or less) before the B annotation (startOffset).
+    There is also the option of negating the query (think Not Before) so that we return only A where it is not before B.
 
   Args:
     left: Dataframe of AQAnnotations, the ones we will return if they are before AQAnnotations from 'right'.
@@ -295,47 +303,51 @@ def Before(left, right, dist=sys.maxsize , limit=0, negate=False):
 
   """
   results = None
-  
+
+  # Workaround for Catalyst optimization issues when working with two Dataframes derived from the same Dataframe - Catalyst gets confused
+  tmpRight = right.select("annotId", "annotSet", "annotType", "docId", "endOffset", "startOffset", "properties") \
+                  .toDF("R_annotId", "R_annotSet", "R_annotType", "R_docId", "R_endOffset", "R_startOffset", 'R_properties')
+
   if negate:
 
-    results = left.alias("L").join(right.alias("R"), 
-                                   ((col("L.docId") == col("R.docId")) & 
-                                    (col("R.startOffset") >=  col("L.endOffset")) & 
-                                    (col("R.startOffset") - col("L.endOffset") < dist)) & 
-                                    (~((col("L.annotSet") == col("R.annotSet")) & 
-                                     (col("L.annotType") == col("R.annotType")) & 
-                                     (col("L.startOffset") == col("R.startOffset")) & 
-                                     (col("L.endOffset") == col("R.endOffset")))),"leftouter") \
-                             .filter(col("R.docId").isNull()) \
-                             .select("L.*")   
-    
+    results = left.alias("L").join(tmpRight,
+                                   ((col("L.docId") == col("R_docId")) &
+                                    (col("R_startOffset") >=  col("L.endOffset")) &
+                                    (col("R_startOffset") - col("L.endOffset") < dist)) &
+                                    (~((col("L.annotSet") == col("R_annotSet")) &
+                                     (col("L.annotType") == col("R_annotType")) &
+                                     (col("L.startOffset") == col("R_startOffset")) &
+                                     (col("L.endOffset") == col("R_endOffset")))),"leftouter") \
+                             .filter(col("R_docId").isNull()) \
+                             .select("L.*")
+
   else:
-    
-    results = left.alias("L").join(right.alias("R"), 
-                        ((col("L.docId") == col("R.docId")) & 
-                         (col("R.startOffset") >=  col("L.endOffset")) & 
-                         (col("R.startOffset") - col("L.endOffset") < dist) & 
-                         (~((col("L.annotSet") == col("R.annotSet")) & 
-                          (col("L.annotType") == col("R.annotType")) & 
-                          (col("L.startOffset") == col("R.startOffset")) & 
-                          (col("L.endOffset") == col("R.endOffset"))))),"leftsemi")     
+
+    results = left.alias("L").join(tmpRight,
+                        ((col("L.docId") == col("R_docId")) &
+                         (col("R_startOffset") >=  col("L.endOffset")) &
+                         (col("R_startOffset") - col("L.endOffset") < dist) &
+                         (~((col("L.annotSet") == col("R_annotSet")) &
+                          (col("L.annotType") == col("R_annotType")) &
+                          (col("L.startOffset") == col("R_startOffset")) &
+                          (col("L.endOffset") == col("R_endOffset"))))),"leftsemi")
 
   if limit > 0:
-    
+
     results = results.limit(limit)
 
   return results
 
 
 def After(left, right, dist=sys.maxsize , limit=0, negate=False):
-  """Provide the ability to find annotations that are after another annotation. 
+  """Provide the ability to find annotations that are after another annotation.
 
-    The input is 2 Dataframes of AQAnnotations. We will call them A and B. 
-    The purpose is to find those annotations in A that are after B. 
-    What that means is the start offset for an annotation from A must be after (or equal to) the end offset from an annotation in B. 
-    We ultimately return the A annotations that meet this criteria. 
-    A distance operator can also be optionally specified. 
-    This would require an A annotation (startOffset) to occur n characters (or less) after the B annotation (endOffset). 
+    The input is 2 Dataframes of AQAnnotations. We will call them A and B.
+    The purpose is to find those annotations in A that are after B.
+    What that means is the start offset for an annotation from A must be after (or equal to) the end offset from an annotation in B.
+    We ultimately return the A annotations that meet this criteria.
+    A distance operator can also be optionally specified.
+    This would require an A annotation (startOffset) to occur n characters (or less) after the B annotation (endOffset).
     There is also the option of negating the query (think Not After) so that we return only A where it is not after B.
 
   Args:
@@ -350,47 +362,51 @@ def After(left, right, dist=sys.maxsize , limit=0, negate=False):
 
   """
   results = None
-  
+
+  # Workaround for Catalyst optimization issues when working with two Dataframes derived from the same Dataframe - Catalyst gets confused
+  tmpRight = right.select("annotId", "annotSet", "annotType", "docId", "endOffset", "startOffset", "properties") \
+                  .toDF("R_annotId", "R_annotSet", "R_annotType", "R_docId", "R_endOffset", "R_startOffset", 'R_properties')
+
   if negate:
 
-    results = left.alias("L").join(right.alias("R"), 
-                                   ((col("L.docId") == col("R.docId")) & 
-                                    (col("L.startOffset") >=  col("R.endOffset")) & 
-                                    (col("L.startOffset") - col("R.endOffset") < dist)) & 
-                                    (~((col("L.annotSet") == col("R.annotSet")) & 
-                                     (col("L.annotType") == col("R.annotType")) & 
-                                     (col("L.startOffset") == col("R.startOffset")) & 
-                                     (col("L.endOffset") == col("R.endOffset")))),"leftouter") \
-                             .filter(col("R.docId").isNull()) \
-                             .select("L.*")   
-    
+    results = left.alias("L").join(tmpRight,
+                                   ((col("L.docId") == col("R_docId")) &
+                                    (col("L.startOffset") >=  col("R_endOffset")) &
+                                    (col("L.startOffset") - col("R_endOffset") < dist)) &
+                                    (~((col("L.annotSet") == col("R_annotSet")) &
+                                     (col("L.annotType") == col("R_annotType")) &
+                                     (col("L.startOffset") == col("R_startOffset")) &
+                                     (col("L.endOffset") == col("R_endOffset")))),"leftouter") \
+                             .filter(col("R_docId").isNull()) \
+                             .select("L.*")
+
   else:
-    
-    results = left.alias("L").join(right.alias("R"), 
-                        ((col("L.docId") == col("R.docId")) & 
-                         (col("L.startOffset") >=  col("R.endOffset")) & 
-                         (col("L.startOffset") - col("R.endOffset") < dist) & 
-                         (~((col("L.annotSet") == col("R.annotSet")) & 
-                          (col("L.annotType") == col("R.annotType")) & 
-                          (col("L.startOffset") == col("R.startOffset")) & 
-                          (col("L.endOffset") == col("R.endOffset"))))),"leftsemi")     
+
+    results = left.alias("L").join(tmpRight,
+                        ((col("L.docId") == col("R_docId")) &
+                         (col("L.startOffset") >=  col("R_endOffset")) &
+                         (col("L.startOffset") - col("R_endOffset") < dist) &
+                         (~((col("L.annotSet") == col("R_annotSet")) &
+                          (col("L.annotType") == col("R_annotType")) &
+                          (col("L.startOffset") == col("R_startOffset")) &
+                          (col("L.endOffset") == col("R_endOffset"))))),"leftsemi")
 
   if limit > 0:
-    
+
     results = results.limit(limit)
 
   return results
 
 
 def Between(middle, left, right, dist=sys.maxsize , limit=0, negate=False):
-  """Provide the ability to find annotations that are before one annotation and after another. 
+  """Provide the ability to find annotations that are before one annotation and after another.
 
-    The input is 3 Dataframes of AQAnnotations. We will call them A, B and C. 
-    The purpose is to find those annotations in A that are before B and after C. 
-    What that means is the end offset for an annotation from A must be before (or equal to) the start offset from an annotation in B and the start offset for A be after (or equal to) the end offset from C. 
-    We ultimately return the A annotations that meet this criteria. 
-    A distance operator can also be optionally specified. 
-    This would require an A annotation (endOffset) to occur n characters (or less) before the B annotation (startOffset) and would require the A annotation (startOffset) to occur n characters (or less) after the C annotation (endOffset) . 
+    The input is 3 Dataframes of AQAnnotations. We will call them A, B and C.
+    The purpose is to find those annotations in A that are before B and after C.
+    What that means is the end offset for an annotation from A must be before (or equal to) the start offset from an annotation in B and the start offset for A be after (or equal to) the end offset from C.
+    We ultimately return the A annotations that meet this criteria.
+    A distance operator can also be optionally specified.
+    This would require an A annotation (endOffset) to occur n characters (or less) before the B annotation (startOffset) and would require the A annotation (startOffset) to occur n characters (or less) after the C annotation (endOffset) .
     There is also the option of negating the query (think Not Between) so that we return only A where it is not before B nor after C.
 
   Args:
@@ -410,71 +426,71 @@ def Between(middle, left, right, dist=sys.maxsize , limit=0, negate=False):
   results = None
 
   if negate:
-    
-    intermediate = middle.alias("L").join(right.alias("R"), 
-                                   ((col("L.docId") == col("R.docId")) & 
-                                    (col("R.startOffset") >=  col("L.endOffset")) & 
-                                    (col("R.startOffset") - col("L.endOffset") < dist)) & 
-                                    (~((col("L.annotSet") == col("R.annotSet")) & 
-                                     (col("L.annotType") == col("R.annotType")) & 
-                                     (col("L.startOffset") == col("R.startOffset")) & 
-                                     (col("L.endOffset") == col("R.endOffset")))),"leftsemi") 
-                             
-    intermediate2 = intermediate.alias("L").join(left.alias("R"), 
-                                   ((col("L.docId") == col("R.docId")) & 
-                                    (col("L.startOffset") >=  col("R.endOffset")) & 
-                                    (col("L.startOffset") - col("R.endOffset") < dist) & 
-                                    (~((col("L.annotSet") == col("R.annotSet")) & 
-                                     (col("L.annotType") == col("R.annotType")) & 
-                                     (col("L.annotId") == col("R.annotId")) & 
-                                     (col("L.endOffset") == col("R.endOffset"))))),"leftsemi") 
-    
-    
-    results = middle.alias("L").join(intermediate2.alias("R"), 
-                                   ((col("L.docId") == col("R.docId")) & 
-                                    (col("L.annotSet") ==  col("R.annotSet")) & 
-                                    (col("L.annotType") == col("R.annotType")) & 
+
+    intermediate = middle.alias("L").join(right.alias("R"),
+                                   ((col("L.docId") == col("R.docId")) &
+                                    (col("R.startOffset") >=  col("L.endOffset")) &
+                                    (col("R.startOffset") - col("L.endOffset") < dist)) &
+                                    (~((col("L.annotSet") == col("R.annotSet")) &
+                                     (col("L.annotType") == col("R.annotType")) &
+                                     (col("L.startOffset") == col("R.startOffset")) &
+                                     (col("L.endOffset") == col("R.endOffset")))),"leftsemi")
+
+    intermediate2 = intermediate.alias("L").join(left.alias("R"),
+                                   ((col("L.docId") == col("R.docId")) &
+                                    (col("L.startOffset") >=  col("R.endOffset")) &
+                                    (col("L.startOffset") - col("R.endOffset") < dist) &
+                                    (~((col("L.annotSet") == col("R.annotSet")) &
+                                     (col("L.annotType") == col("R.annotType")) &
+                                     (col("L.annotId") == col("R.annotId")) &
+                                     (col("L.endOffset") == col("R.endOffset"))))),"leftsemi")
+
+
+    results = middle.alias("L").join(intermediate2.alias("R"),
+                                   ((col("L.docId") == col("R.docId")) &
+                                    (col("L.annotSet") ==  col("R.annotSet")) &
+                                    (col("L.annotType") == col("R.annotType")) &
                                     (col("L.annotId") == col("R.annotId"))),"leftouter") \
                                .filter(col("R.docId").isNull()) \
-                               .select("L.*") 
+                               .select("L.*")
   else:
-    
-    intermediate = middle.alias("L").join(right.alias("R"), 
-                                   ((col("L.docId") == col("R.docId")) & 
-                                    (col("R.startOffset") >=  col("L.endOffset")) & 
-                                    (col("R.startOffset") - col("L.endOffset") < dist)) & 
-                                    (~((col("L.annotSet") == col("R.annotSet")) & 
-                                     (col("L.annotType") == col("R.annotType")) & 
-                                     (col("L.startOffset") == col("R.startOffset")) & 
-                                     (col("L.endOffset") == col("R.endOffset")))),"leftsemi")     
-    
-    results = intermediate.alias("L").join(left.alias("R"), 
-                                   ((col("L.docId") == col("R.docId")) & 
-                                    (col("L.startOffset") >=  col("R.endOffset")) & 
-                                    (col("L.startOffset") - col("R.endOffset") < dist) & 
-                                    (~((col("L.annotSet") == col("R.annotSet")) & 
-                                     (col("L.annotType") == col("R.annotType")) & 
-                                     (col("L.startOffset") == col("R.startOffset")) & 
-                                     (col("L.endOffset") == col("R.endOffset"))))),"leftsemi") 
-    
+
+    intermediate = middle.alias("L").join(right.alias("R"),
+                                   ((col("L.docId") == col("R.docId")) &
+                                    (col("R.startOffset") >=  col("L.endOffset")) &
+                                    (col("R.startOffset") - col("L.endOffset") < dist)) &
+                                    (~((col("L.annotSet") == col("R.annotSet")) &
+                                     (col("L.annotType") == col("R.annotType")) &
+                                     (col("L.startOffset") == col("R.startOffset")) &
+                                     (col("L.endOffset") == col("R.endOffset")))),"leftsemi")
+
+    results = intermediate.alias("L").join(left.alias("R"),
+                                   ((col("L.docId") == col("R.docId")) &
+                                    (col("L.startOffset") >=  col("R.endOffset")) &
+                                    (col("L.startOffset") - col("R.endOffset") < dist) &
+                                    (~((col("L.annotSet") == col("R.annotSet")) &
+                                     (col("L.annotType") == col("R.annotType")) &
+                                     (col("L.startOffset") == col("R.startOffset")) &
+                                     (col("L.endOffset") == col("R.endOffset"))))),"leftsemi")
+
   if limit > 0:
-    
+
     results = results.limit(limit)
 
   return results
 
 
-def Sequence(left, right, dist=sys.maxsize, limit=0): 
-  """Provide the ability to find annotations that are before another annotation. 
+def Sequence(left, right, dist=sys.maxsize, limit=0):
+  """Provide the ability to find annotations that are before another annotation.
 
-    The input is 2 Dataframes of AQAnnotations. We will call them A and B. 
-    The purpose is to find those annotations in A that are before B. 
-    What that means is the end offset for an annotation from A must be before (or equal to) the start offset from an annotation in B. 
-    We ultimately return the annotations that meet this criteria. 
-    Unlike the Before function, we adjust the returned annotation a bit. 
-    For example, we set the annotType to "seq" and we use the A startOffset and the B endOffset. 
+    The input is 2 Dataframes of AQAnnotations. We will call them A and B.
+    The purpose is to find those annotations in A that are before B.
+    What that means is the end offset for an annotation from A must be before (or equal to) the start offset from an annotation in B.
+    We ultimately return the annotations that meet this criteria.
+    Unlike the Before function, we adjust the returned annotation a bit.
+    For example, we set the annotType to "seq" and we use the A startOffset and the B endOffset.
     A distance operator can also be optionally specified. This would require an A annotation (endOffset) to occur n characters (or less) before the B annotation (startOffset).
-  
+
   Args:
     left: Dataframe of AQAnnotations, the ones we will return if they are before AQAnnotations from 'right'.
     right: Dataframe of AQAnnotations, the ones we are looking to see if are after AQAnnotations from 'left'.
@@ -486,33 +502,38 @@ def Sequence(left, right, dist=sys.maxsize, limit=0):
 
  """
   results = None
-  
-  results = left.alias("L").join(right.alias("R"), 
-                                 ((col("L.docId") == col("R.docId")) & 
-                                  (col("R.startOffset") >=  col("L.endOffset")) & 
-                                  (col("R.startOffset") - col("L.endOffset") < dist)) & 
-                                  (~((col("L.annotSet") == col("R.annotSet")) & 
-                                    (col("L.annotType") == col("R.annotType")) & 
-                                    (col("L.startOffset") == col("R.startOffset")) & 
-                                    (col("L.endOffset") == col("R.endOffset"))))) \
-                           .select("L.docId", "L.annotSet", "L.startOffset", "R.endOffset", "L.annotId") \
+
+  # Workaround for Catalyst optimization issues when working with two Dataframes derived from the same Dataframe - Catalyst gets confused
+  tmpRight = right.select("annotId", "annotSet", "annotType", "docId", "endOffset", "startOffset", "properties") \
+                  .toDF("R_annotId", "R_annotSet", "R_annotType", "R_docId", "R_endOffset", "R_startOffset", 'R_properties')
+
+  results = left.alias("L").join(tmpRight,
+                                 ((col("L.docId") == col("R_docId")) &
+                                  (col("R_startOffset") >=  col("L.endOffset")) &
+                                  (col("R_startOffset") - col("L.endOffset") < dist)) &
+                                  (~((col("L.annotSet") == col("R_annotSet")) &
+                                    (col("L.annotType") == col("R_annotType")) &
+                                    (col("L.startOffset") == col("R_startOffset")) &
+                                    (col("L.endOffset") == col("R_endOffset"))))) \
+                           .select("L.docId", "L.annotSet", "L.startOffset", "R_endOffset", "L.annotId") \
+                           .withColumnRenamed("R_endOffset", "endOffset") \
                            .withColumn("annotType",lit("seq")) \
                            .withColumn("properties",lit(None)) \
                            .dropDuplicates(["docId","annotSet","annotType","annotId","startOffset","endOffset"])
 
 
   if limit > 0:
-    
+
     results = results.limit(limit)
 
   return results
 
 
 def Or(left, right, limit=0):
-  """Provide the ability to combine (union) Dataframes of AQAnnotations. 
-  
+  """Provide the ability to combine (union) Dataframes of AQAnnotations.
+
     The input is 2 Dataframes of AQAnnotations. The output is the union of these annotations.
-  
+
   Args:
     left: Dataframe of AQAnnotations
     right: Dataframe of AQAnnotations
@@ -523,22 +544,22 @@ def Or(left, right, limit=0):
 
   """
   results = None
-  
+
   # Will change number of partitions (and impact performance)
   results = left.union(right) \
-                .dropDuplicates(["docId","annotSet","annotType","annotId","startOffset","endOffset"])  
-  
+                .dropDuplicates(["docId","annotSet","annotType","annotId","startOffset","endOffset"])
+
   if limit > 0:
-    
+
     results = results.limit(limit)
 
   return results
 
 
 def And(left, right, limit=0, negate=False, leftOnly=True):
-  """Provide the ability to find annotations that are in the same document. 
+  """Provide the ability to find annotations that are in the same document.
 
-    The input is 2 Dataframes of AQAnnotations. We will call them A and B. 
+    The input is 2 Dataframes of AQAnnotations. We will call them A and B.
     The purpose is to find those annotations in A and B that are in the same document.
 
   Args:
@@ -553,44 +574,52 @@ def And(left, right, limit=0, negate=False, leftOnly=True):
 
   """
   results = None
-  
+
+  # Workaround for Catalyst optimization issues when working with two Dataframes derived from the same Dataframe - Catalyst gets confused
+  tmpRight = right.select("annotId", "annotSet", "annotType", "docId", "endOffset", "startOffset", "properties") \
+                  .toDF("R_annotId", "R_annotSet", "R_annotType", "R_docId", "R_endOffset", "R_startOffset", 'R_properties')
+
+  tmpLeft = left.select("annotId", "annotSet", "annotType", "docId", "endOffset", "startOffset", "properties") \
+                  .toDF("L_annotId", "L_annotSet", "L_annotType", "L_docId", "L_endOffset", "L_startOffset", 'L_properties')
+
   if negate:
-    
-    results = left.alias("L").join(right.select("docId").distinct().alias("R"), 
-                                   (col("L.docId") == col("R.docId")),"leftouter") \
-                             .filter(col("R.docId").isNull()) \
+
+    results = left.alias("L").join(tmpRight.select("R_docId").distinct(),
+                                   (col("L.docId") == col("R_docId")),"leftouter") \
+                             .filter(col("R_docId").isNull()) \
                              .select("L.*")
-  
+
   else:
-    
+
     if leftOnly:
-      
-      results = left.alias("L").join(right.select("docId").distinct().alias("R"), 
-                                     (col("L.docId") == col("R.docId")),"leftsemi")
-      
+
+      results = left.alias("L").join(tmpRight.select("R_docId").distinct(),
+                                     (col("L.docId") == col("R_docId")),"leftsemi")
+
     else:
 
-      a = left.alias("L").join(right.select("docId").distinct().alias("R"), 
-                               (col("L.docId") == col("R.docId")),"leftsemi")
-      
-      b = right.alias("L").join(left.select("docId").distinct().alias("R"), 
-                                (col("L.docId") == col("R.docId")),"leftsemi")
- 
+      a = left.alias("L").join(tmpRight.select("R_docId").distinct(),
+                               (col("L.docId") == col("R_docId")),"leftsemi")
+
+      b = right.alias("L").join(tmpLeft.select("L_docId").distinct(),
+                                (col("L.docId") == col("L_docId")),"leftsemi")
+
       # Will change number of partitions (and impact performance)
       results = a.union(b) \
                  .dropDuplicates(["docId","annotSet","annotType","annotId","startOffset","endOffset"])
-              
+
   if limit > 0:
-    
+
     results = results.limit(limit)
 
   return results
 
 
+
 def MatchProperty(left, right, name, negate=False, limit=0):
-  """Provide the ability to find annotations (looking at their property) that are in the same document. 
-  
-    The input is 2 Dataframes of AQAnnotations. We will call them A and B. 
+  """Provide the ability to find annotations (looking at their property) that are in the same document.
+
+    The input is 2 Dataframes of AQAnnotations. We will call them A and B.
     The purpose is to find those annotations in A that are in the same document as B and also match values on the specified property.
 
   Args:
@@ -605,37 +634,41 @@ def MatchProperty(left, right, name, negate=False, limit=0):
 
  """
   results = None
-  
+
+  # Workaround for Catalyst optimization issues when working with two Dataframes derived from the same Dataframe - Catalyst gets confused
+  tmpRight = right.select("annotId", "annotSet", "annotType", "docId", "endOffset", "startOffset", "properties") \
+                  .toDF("R_annotId", "R_annotSet", "R_annotType", "R_docId", "R_endOffset", "R_startOffset", 'R_properties')
+
   if negate:
 
-    results = left.alias("L").join(right.alias("R"), 
-                                   ((col("L.docId") == col("R.docId")) & 
-                                    (col("L.properties.`" + name + "`")  == col("R.properties.`" + name + "`"))) ,"leftouter") \
-                           .filter(col("R.docId").isNull()) \
-                           .select("L.*")    
-      
+    results = left.alias("L").join(tmpRight,
+                                   ((col("L.docId") == col("R_docId")) &
+                                    (col("L.properties.`" + name + "`")  == col("R_properties.`" + name + "`"))) ,"leftouter") \
+                           .filter(col("R_docId").isNull()) \
+                           .select("L.*")
+
   else:
 
-    results = left.alias("L").join(right.alias("R"), 
-                                   ((col("L.docId") == col("R.docId")) & 
-                                    (col("L.properties.`" + name + "`") == col("R.properties.`" + name + "`"))),"leftsemi")
-    
+    results = left.alias("L").join(tmpRight,
+                                   ((col("L.docId") == col("R_docId")) &
+                                    (col("L.properties.`" + name + "`") == col("R_properties.`" + name + "`"))),"leftsemi")
+
   if limit > 0:
-    
+
     results = results.limit(limit)
 
   return results
 
 
 def Preceding(annot, anchor, container=None, cnt=3):
-  """Provide the ability to find the preceding sibling annotations for every annotation in the anchor Dataframe of AQAnnotations. 
-   
-    The preceding sibling annotations can optionally be required to be contained in a container Dataframe of AQAnnotations. 
-    The return type of this function is different from other functions. 
+  """Provide the ability to find the preceding sibling annotations for every annotation in the anchor Dataframe of AQAnnotations.
+
+    The preceding sibling annotations can optionally be required to be contained in a container Dataframe of AQAnnotations.
+    The return type of this function is different from other functions.
     Instead of returning a Dataframe of AQAnnotations this function returns a Dataframe of (AQAnnotation,Array[AQAnnotation]).
 
   Args:
-    annot: Dataframe of AQAnnotations, the ones we will be using to look for preceding sibling annotations. 
+    annot: Dataframe of AQAnnotations, the ones we will be using to look for preceding sibling annotations.
     anchor: Dataframe of AQAnnotations  starting point for using to look for preceding sibling annotations (use the startOffset and docId).
     container: Dataframe of AQAnnotations to use when requiring the preceding sibling annotations to be contained in a specific annotation.
     cnt: Number of preceding sibling AQAnnotations to return.
@@ -648,7 +681,7 @@ def Preceding(annot, anchor, container=None, cnt=3):
   def precedingAQ(rec,cnt):
     # Sort the preceding annotations (limit the number of results to the cnt)
     srecs = sorted(rec[1], key=lambda x: (-1 if x.LendOffset == None else x.LendOffset),reverse=True)[0:cnt]
-    
+
     # We can extract the key from the any 'right' entry in sorted recs (we will use the first one)
     key = Row(docId = srecs[0].RdocId,
               annotSet = srecs[0].RannotSet,
@@ -658,7 +691,7 @@ def Preceding(annot, anchor, container=None, cnt=3):
               annotId = int(srecs[0].RannotId),
               properties = srecs[0].Rproperties)
 
-    # Construct the array 
+    # Construct the array
     values = []
     for rec in srecs:
       if rec.LdocId != None:
@@ -670,8 +703,8 @@ def Preceding(annot, anchor, container=None, cnt=3):
                           annotId = int(rec.LannotId),
                           properties = rec.Lproperties))
     return(key,values)
-  
-  
+
+
   # Get the preceding 'contained' annotations
   def precedingContainedAQ(rec):
     if rec.CdocId == None:
@@ -682,50 +715,50 @@ def Preceding(annot, anchor, container=None, cnt=3):
           if (entry.startOffset >= rec.CstartOffset) and (entry.endOffset <= rec.CendOffset):
             values.append(entry)
         return (rec.annot,values)
-        
-               
+
+
   l = annot.select("annotId","annotSet","annotType","docId","endOffset","properties","startOffset").toDF("LannotId","LannotSet","LannotType","LdocId","LendOffset","Lproperties","LstartOffset")
   r = anchor.select("annotId","annotSet","annotType","docId","endOffset","properties","startOffset").toDF("RannotId","RannotSet","RannotType","RdocId","RendOffset","Rproperties","RstartOffset")
 
 
   # Group on the anchor annotation
-  results = l.join(r, 
-                   (col("LdocId") == col("RdocId")) & 
-                   (col("LendOffset") <= col("RstartOffset")), 
+  results = l.join(r,
+                   (col("LdocId") == col("RdocId")) &
+                   (col("LendOffset") <= col("RstartOffset")),
                     "rightouter") \
              .rdd \
              .groupBy(lambda x: (x["RdocId"],x["RstartOffset"],x["RendOffset"])) \
              .map(lambda rec: precedingAQ(rec,cnt))
 
   results = spark.createDataFrame(results.map(lambda x: x),AQSchemaList())
-  
+
   if (container != None) and (not(container.rdd.isEmpty())):
     c = container.select("annotId","annotSet","annotType","docId","endOffset","properties","startOffset").toDF("CannotId","CannotSet","CannotType","CdocId","CendOffset","Cproperties","CstartOffset")
-    cResults = results.join(c, 
-                           (col("annot.docId") == col("CdocId")) & 
-                           (col("annot.startOffset") >= col("CstartOffset")) & 
-                           (col("annot.endOffset") <= col("CendOffset")), 
+    cResults = results.join(c,
+                           (col("annot.docId") == col("CdocId")) &
+                           (col("annot.startOffset") >= col("CstartOffset")) &
+                           (col("annot.endOffset") <= col("CendOffset")),
                             "leftouter") \
                       .rdd \
                       .map(lambda rec: precedingContainedAQ(rec))
 
-    
-    # Need to drop duplicates    
+
+    # Need to drop duplicates
     return spark.createDataFrame(cResults.map(lambda x: x),AQSchemaList())
-  
+
   else:
     return results
 
 
 def Following(annot, anchor, container=None, cnt=3):
-  """Provide the ability to find the following sibling annotations for every annotation in the anchor Dataframe of AQAnnotations. 
+  """Provide the ability to find the following sibling annotations for every annotation in the anchor Dataframe of AQAnnotations.
 
-    The following sibling annotations can optionally be required to be contained in a container Dataframe of AQAnnotations. 
-    The return type of this function is different from other functions. 
+    The following sibling annotations can optionally be required to be contained in a container Dataframe of AQAnnotations.
+    The return type of this function is different from other functions.
     Instead of returning a Dataframe of AQAnnotations this function returns a Dataframe (AQAnnotation,Array[AQAnnotation]).
 
   Args:
-    annot: Dataframe of AQAnnotations, the ones we will be using to look for following sibling annotations. 
+    annot: Dataframe of AQAnnotations, the ones we will be using to look for following sibling annotations.
     anchor: Dataframe of AQAnnotations  starting point for using to look for following sibling annotations (use the endOffset and docId).
     container: Dataframe of AQAnnotations to use when requiring the following sibling annotations to be contained in a specific annotation.
     cnt: Number of preceding sibling AQAnnotations to return.
@@ -733,12 +766,12 @@ def Following(annot, anchor, container=None, cnt=3):
   Returns:
     Dataframe of (AQAnnotation,Array[AQAnnotation])
 
-  """  
+  """
   # Get the following annotations
   def followingAQ(rec,cnt):
     # Sort the following annotations (limit the number of results to the cnt)
     srecs = sorted(rec[1], key=lambda x: (-1 if x.LstartOffset == None else x.LstartOffset))[0:cnt]
-    
+
     # We can extract the key from the any 'right' entry in sorted recs (we will use the first one)
     key = Row(docId = srecs[0].RdocId,
               annotSet = srecs[0].RannotSet,
@@ -748,7 +781,7 @@ def Following(annot, anchor, container=None, cnt=3):
               annotId = int(srecs[0].RannotId),
               properties = srecs[0].Rproperties)
 
-    # Construct the array 
+    # Construct the array
     values = []
     for rec in srecs:
       if rec.LdocId != None:
@@ -758,11 +791,11 @@ def Following(annot, anchor, container=None, cnt=3):
                           startOffset = int(rec.LstartOffset),
                           endOffset = int(rec.LendOffset),
                           annotId = int(rec.LannotId),
-                          properties = rec.Lproperties))  
+                          properties = rec.Lproperties))
 
     return(key,values)
-  
-  
+
+
   # Get the following 'contained' annotations
   def followingContainedAQ(rec):
     if rec.CdocId == None:
@@ -772,33 +805,33 @@ def Following(annot, anchor, container=None, cnt=3):
         for entry in rec.annots:
           if (entry.startOffset >= rec.CstartOffset) and (entry.endOffset <= rec.CendOffset):
             values.append(entry)
-        return (rec.annot,values)        
-               
+        return (rec.annot,values)
+
   l = annot.select("annotId","annotSet","annotType","docId","endOffset","properties","startOffset").toDF("LannotId","LannotSet","LannotType","LdocId","LendOffset","Lproperties","LstartOffset")
   r = anchor.select("annotId","annotSet","annotType","docId","endOffset","properties","startOffset").toDF("RannotId","RannotSet","RannotType","RdocId","RendOffset","Rproperties","RstartOffset")
   # Group on the anchor annotation
-  results = l.join(r, 
-                   (col("LdocId") == col("RdocId")) & 
-                   (col("LstartOffset") >= col("RendOffset")), 
+  results = l.join(r,
+                   (col("LdocId") == col("RdocId")) &
+                   (col("LstartOffset") >= col("RendOffset")),
                     "rightouter") \
              .rdd \
              .groupBy(lambda x: (x["RdocId"],x["RstartOffset"],x["RendOffset"])) \
              .map(lambda rec: followingAQ(rec,cnt))
 
   results = spark.createDataFrame(results.map(lambda x: x),AQSchemaList())
-  
+
   if (container != None) and (not(container.rdd.isEmpty())):
     c = container.select("annotId","annotSet","annotType","docId","endOffset","properties","startOffset").toDF("CannotId","CannotSet","CannotType","CdocId","CendOffset","Cproperties","CstartOffset")
-    cResults = results.join(c, 
-                           (col("annot.docId") == col("CdocId")) & 
-                           (col("annot.startOffset") >= col("CstartOffset")) & 
-                           (col("annot.endOffset") <= col("CendOffset")), 
+    cResults = results.join(c,
+                           (col("annot.docId") == col("CdocId")) &
+                           (col("annot.startOffset") >= col("CstartOffset")) &
+                           (col("annot.endOffset") <= col("CendOffset")),
                             "leftouter") \
                       .rdd \
                       .map(lambda rec: followingContainedAQ(rec))
 
     # Need to drop duplicates
     return spark.createDataFrame(cResults.map(lambda x: x),AQSchemaList())
-    
+
   else:
     return results
