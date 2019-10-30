@@ -1,0 +1,284 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Usage &mdash; AnnotationQueryPython 0.0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script type="text/javascript" src="_static/jquery.js"></script>
+        <script type="text/javascript" src="_static/underscore.js"></script>
+        <script type="text/javascript" src="_static/doctools.js"></script>
+        <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Citing" href="citing.html" />
+    <link rel="prev" title="Hydrate" href="generated/AQPython.Utilities.Hydrate.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> AnnotationQueryPython
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Usage</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#query-examples">Query examples</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="citing.html">Citing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="license.html">License</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">AnnotationQueryPython</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>Usage</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/usage.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="usage">
+<h1>Usage<a class="headerlink" href="#usage" title="Permalink to this headline">¶</a></h1>
+<p>The typical usage pattern will be something like the following. In the below example, we are finding those sentences (identified by Genia) that are contained in a ce:para XML element.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Get a SparkSession</span>
+<span class="n">spark</span> <span class="o">=</span> <span class="n">pyspark</span><span class="o">.</span><span class="n">sql</span><span class="o">.</span><span class="n">SparkSession</span><span class="o">.</span><span class="n">builder</span><span class="o">.</span><span class="n">getOrCreate</span><span class="p">()</span>
+
+<span class="c1"># Set a reasonabe value for shuffle partitons (help with join performance)</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.sql.shuffle.partitions&quot;</span><span class="p">,</span><span class="mi">4</span><span class="p">)</span>
+
+<span class="c1"># Read in some annotations.  The below reads in the Original Markup annotations (think XML)</span>
+<span class="n">omAnnots</span> <span class="o">=</span> <span class="n">GetAQAnnotations</span><span class="p">(</span><span class="n">spark</span><span class="o">.</span><span class="n">read</span><span class="o">.</span><span class="n">parquet</span><span class="p">(</span><span class="s2">&quot;./tests/resources/om/&quot;</span><span class="p">),</span>
+                            <span class="n">props</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;*&quot;</span><span class="p">],</span>
+                            <span class="n">decodeProps</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;*&quot;</span><span class="p">],</span>
+                            <span class="n">numPartitions</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;spark.sql.shuffle.partitions&quot;</span><span class="p">)))</span> \
+                            <span class="o">.</span><span class="n">persist</span><span class="p">(</span><span class="n">StorageLevel</span><span class="o">.</span><span class="n">DISK_ONLY</span><span class="p">)</span>
+
+<span class="c1"># Read in some more annotations.  The below reads in NLP annotations generated by Genia.</span>
+<span class="n">geAnnots</span> <span class="o">=</span> <span class="n">GetAQAnnotations</span><span class="p">(</span><span class="n">spark</span><span class="o">.</span><span class="n">read</span><span class="o">.</span><span class="n">parquet</span><span class="p">(</span><span class="s2">&quot;./tests/resources/genia/&quot;</span><span class="p">),</span>
+                            <span class="n">props</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;orig&quot;</span><span class="p">,</span> <span class="s2">&quot;lemma&quot;</span><span class="p">,</span> <span class="s2">&quot;pos&quot;</span><span class="p">],</span>
+                            <span class="n">decodeProps</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;orig&quot;</span><span class="p">,</span> <span class="s2">&quot;lemma&quot;</span><span class="p">],</span>
+                            <span class="n">numPartitions</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;spark.sql.shuffle.partitions&quot;</span><span class="p">)))</span> \
+                            <span class="o">.</span><span class="n">persist</span><span class="p">(</span><span class="n">StorageLevel</span><span class="o">.</span><span class="n">DISK_ONLY</span><span class="p">)</span>
+
+<span class="c1"># Find those sentence annotations contained in a ce:para (XML element)</span>
+<span class="n">sentenceParaAnnots</span> <span class="o">=</span> <span class="n">ContainedIn</span><span class="p">(</span><span class="n">FilterType</span><span class="p">(</span><span class="n">geAnnots</span><span class="p">,</span><span class="s1">&#39;sentence&#39;</span><span class="p">),</span><span class="n">FilterType</span><span class="p">(</span><span class="n">omAnnots</span><span class="p">,</span><span class="s1">&#39;ce:para&#39;</span><span class="p">))</span>
+</pre></div>
+</div>
+<div class="section" id="query-examples">
+<h2>Query examples<a class="headerlink" href="#query-examples" title="Permalink to this headline">¶</a></h2>
+<p>To get you started, you can find below some more examples using the various query functions. Note that you can combine them to express more complex queries.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Find the annotations &quot;simple&quot; that are within 25 characters after an annotation &quot;the&quot;.</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">After</span><span class="p">(</span><span class="n">FilterProperty</span><span class="p">(</span><span class="n">geAnnots</span><span class="p">,</span><span class="s2">&quot;orig&quot;</span><span class="p">,</span><span class="s2">&quot;simple&quot;</span><span class="p">),</span> <span class="n">FilterProperty</span><span class="p">(</span><span class="n">geAnnots</span><span class="p">,</span><span class="s2">&quot;orig&quot;</span><span class="p">,</span><span class="s2">&quot;the&quot;</span><span class="p">),</span><span class="mi">25</span><span class="p">)</span>
+
+<span class="c1"># Find the annotations &quot;the&quot; that are within 25 characters before an annotation &quot;simple&quot;</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">Before</span><span class="p">(</span><span class="n">FilterProperty</span><span class="p">(</span><span class="n">geAnnots</span><span class="p">,</span><span class="s2">&quot;orig&quot;</span><span class="p">,</span><span class="s2">&quot;the&quot;</span><span class="p">),</span> <span class="n">FilterProperty</span><span class="p">(</span><span class="n">geAnnots</span><span class="p">,</span><span class="s2">&quot;orig&quot;</span><span class="p">,</span><span class="s2">&quot;simple&quot;</span><span class="p">),</span><span class="mi">25</span><span class="p">)</span>
+
+<span class="c1"># Find the annotations &quot;simple&quot; that are after an annotation &quot;the&quot; and before an annotation &quot;end&quot;</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">Between</span><span class="p">(</span><span class="n">FilterProperty</span><span class="p">(</span><span class="n">geAnnots</span><span class="p">,</span><span class="s2">&quot;orig&quot;</span><span class="p">,</span><span class="s2">&quot;simple&quot;</span><span class="p">),</span> <span class="n">FilterProperty</span><span class="p">(</span><span class="n">geAnnots</span><span class="p">,</span><span class="s2">&quot;orig&quot;</span><span class="p">,</span><span class="s2">&quot;the&quot;</span><span class="p">),</span> <span class="n">FilterProperty</span><span class="p">(</span><span class="n">geAnnots</span><span class="p">,</span><span class="s2">&quot;orig&quot;</span><span class="p">,</span><span class="s2">&quot;end&quot;</span><span class="p">))</span>
+
+<span class="c1"># find those annotations &quot;sentence&quot; that are contained in &quot;ce:para&quot;</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">ContainedIn</span><span class="p">(</span><span class="n">FilterType</span><span class="p">(</span><span class="n">geAnnots</span><span class="p">,</span><span class="s2">&quot;sentence&quot;</span><span class="p">),</span> <span class="n">FilterType</span><span class="p">(</span><span class="n">omAnnots</span><span class="p">,</span><span class="s2">&quot;ce:para&quot;</span><span class="p">))</span>
+
+<span class="c1"># find those annotations &quot;sentence&quot; that contain an annotation &quot;simple&quot;</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">Contains</span><span class="p">(</span><span class="n">FilterProperty</span><span class="p">(</span><span class="n">geAnnots</span><span class="p">,</span><span class="s2">&quot;orig&quot;</span><span class="p">,</span><span class="s2">&quot;sentence&quot;</span><span class="p">),</span> <span class="n">FilterProperty</span><span class="p">(</span><span class="n">geAnnots</span><span class="p">,</span><span class="s2">&quot;orig&quot;</span><span class="p">,</span><span class="s2">&quot;simple&quot;</span><span class="p">))</span>
+
+<span class="c1"># filter the property field &quot;orig&quot; with the value &quot;simulator&quot;. A single value or an array of values can be used for the filter comparison.</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">FilterProperty</span><span class="p">(</span><span class="n">geAnnots</span><span class="p">,</span><span class="s2">&quot;orig&quot;</span><span class="p">,</span><span class="s2">&quot;simulator&quot;</span><span class="p">)</span>
+
+<span class="c1"># filter the annotation sets with the value &quot;ge&quot;</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">FilterSet</span><span class="p">(</span><span class="n">geAnnots</span><span class="p">,</span><span class="s2">&quot;ge&quot;</span><span class="p">)</span>
+
+<span class="c1"># filter the annotation types with the value &quot;sentence&quot;</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">FilterType</span><span class="p">(</span><span class="n">geAnnots</span><span class="p">,</span><span class="s2">&quot;sentence&quot;</span><span class="p">)</span>
+
+<span class="c1"># return the following &quot;sentence&quot; annotation that contains an annotation &quot;simple&quot; within the annotation anchor: &quot;ce:para&quot;</span>
+<span class="n">sentences</span> <span class="o">=</span> <span class="n">Contains</span><span class="p">(</span><span class="n">FilterType</span><span class="p">(</span><span class="n">geAnnots</span><span class="p">,</span><span class="s2">&quot;sentence&quot;</span><span class="p">),</span><span class="n">FilterProperty</span><span class="p">(</span><span class="n">geAnnots</span><span class="p">,</span><span class="s2">&quot;orig&quot;</span><span class="p">,</span><span class="s2">&quot;simple&quot;</span><span class="p">))</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">Following</span><span class="p">(</span><span class="n">FilterType</span><span class="p">(</span><span class="n">geAnnots</span><span class="p">,</span><span class="s2">&quot;sentence&quot;</span><span class="p">),</span> <span class="n">sentences</span><span class="p">,</span><span class="n">FilterType</span><span class="p">(</span><span class="n">omAnnots</span><span class="p">,</span><span class="s2">&quot;ce:para&quot;</span><span class="p">))</span>
+
+<span class="c1"># return the preceding &quot;sentence&quot; annotation that contains an annotation &quot;simple&quot; within the annotation anchor: &quot;ce:para&quot;</span>
+<span class="n">val</span> <span class="n">sentences</span> <span class="o">=</span> <span class="n">Contains</span><span class="p">(</span><span class="n">FilterType</span><span class="p">(</span><span class="n">geAnnots</span><span class="p">,</span><span class="s2">&quot;sentence&quot;</span><span class="p">),</span><span class="n">FilterProperty</span><span class="p">(</span><span class="n">geAnnots</span><span class="p">,</span><span class="s2">&quot;orig&quot;</span><span class="p">,</span><span class="s2">&quot;simple&quot;</span><span class="p">))</span>
+<span class="n">val</span> <span class="n">results</span> <span class="o">=</span> <span class="n">Preceding</span><span class="p">(</span><span class="n">FilterType</span><span class="p">(</span><span class="n">geAnnots</span><span class="p">,</span><span class="s2">&quot;sentence&quot;</span><span class="p">),</span> <span class="n">sentences</span><span class="p">,</span><span class="n">FilterType</span><span class="p">(</span><span class="n">omAnnots</span><span class="p">,</span><span class="s2">&quot;ce:para&quot;</span><span class="p">))</span>
+
+<span class="c1"># find the annotations &quot;basic&quot; that are in the same document as the annotation &quot;simple&quot; and also match values on the specified property &quot;parentId&quot;</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">MatchProperty</span><span class="p">(</span><span class="n">FilterProperty</span><span class="p">(</span><span class="n">geAnnots</span><span class="p">,</span><span class="s2">&quot;orig&quot;</span><span class="p">,</span><span class="s2">&quot;basic&quot;</span><span class="p">),</span> <span class="n">FilterProperty</span><span class="p">(</span><span class="n">geAnnots</span><span class="p">,</span><span class="s2">&quot;orig&quot;</span><span class="p">,</span><span class="s2">&quot;simple&quot;</span><span class="p">),</span><span class="s2">&quot;parentId&quot;</span><span class="p">)</span>
+
+<span class="c1"># filter the property field &quot;orig&quot; using a regex expression &quot;^sim*&quot;</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">RegexProperty</span><span class="p">(</span><span class="n">geAnnots</span><span class="p">,</span><span class="s2">&quot;orig&quot;</span><span class="p">,</span><span class="s2">&quot;^sim*&quot;</span><span class="p">)</span>
+
+<span class="c1"># Sequence find the annotations &quot;the&quot; that are within 50 characters before an annotation &quot;simple&quot;</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">Sequence</span><span class="p">(</span><span class="n">FilterProperty</span><span class="p">(</span><span class="n">geAnnots</span><span class="p">,</span><span class="s2">&quot;orig&quot;</span><span class="p">,</span><span class="s2">&quot;the&quot;</span><span class="p">),</span> <span class="n">FilterProperty</span><span class="p">(</span><span class="n">geAnnots</span><span class="p">,</span><span class="s2">&quot;orig&quot;</span><span class="p">,</span><span class="s2">&quot;simple&quot;</span><span class="p">),</span> <span class="mi">50</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="citing.html" class="btn btn-neutral float-right" title="Citing" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="generated/AQPython.Utilities.Hydrate.html" class="btn btn-neutral float-left" title="Hydrate" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019, Elsevier Inc.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
