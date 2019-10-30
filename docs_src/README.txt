@@ -16,6 +16,8 @@ pip install -e .
 ```
 make autogen html
 ```
+Copy the files in `_build/html` in the `docs` directory at the root of the project. 
+Make sure you have an empty  file named `.nojekyll` in the `docs` directory
 
 ## Update copyright year and version number
 Version number is defined in `conf.py` file
