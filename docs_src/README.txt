@@ -7,7 +7,7 @@ pip install sphinx
 pip install sphinx_rtd_theme
 ```
 
-In the current package library directory (for which we want to generate the documentation), load the package in development mode:
+In the current package library directory (for which we want to generate the python documentation), load the package in development mode:
 ```
 pip install -e .
 ```
