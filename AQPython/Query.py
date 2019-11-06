@@ -98,17 +98,17 @@ def FilterSet(df, annotSet="", annotSetArr=[], annotSetCompare="=", limit=0, neg
 
   if annotSet != "":
 
-    query += ("annotSet " + annotSetCompare + " \"" + annotSet.lower() + "\"")
+    query += ("annotSet " + annotSetCompare + " \"" + annotSet + "\"")
 
   elif len(annotSetArr) > 0:
 
       if annotSetCompare == "=":
 
-        query += ("annotSet in " + "('" + "','".join(map(str,annotSetArr)).lower() + "')")
+        query += ("annotSet in " + "('" + "','".join(map(str,annotSetArr)) + "')")
 
       else:
 
-        query += ("annotSet not in " + "('" + "','".join(map(str,annotSetArr)).lower() + "')")
+        query += ("annotSet not in " + "('" + "','".join(map(str,annotSetArr)) + "')")
 
   if negate:
 
@@ -142,17 +142,17 @@ def FilterType(df, annotType="", annotTypeArr=[], annotTypeCompare="=", limit=0,
 
   if annotType != "":
 
-    query += ("annotType " + annotTypeCompare + " \"" + annotType.lower() + "\"")
+    query += ("annotType " + annotTypeCompare + " \"" + annotType + "\"")
 
   elif len(annotTypeArr) > 0:
 
       if annotTypeCompare == "=":
 
-        query += ("annotType in " + "('" + "','".join(map(str,annotTypeArr)).lower() + "')")
+        query += ("annotType in " + "('" + "','".join(map(str,annotTypeArr)) + "')")
 
       else:
 
-        query += ("annotType not in " + "('" + "','".join(map(str,annotTypeArr)).lower() + "')")
+        query += ("annotType not in " + "('" + "','".join(map(str,annotTypeArr)) + "')")
 
   if negate:
 
