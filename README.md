@@ -88,9 +88,14 @@ The following functions have proven useful when looking at AQAnnotations.  When 
 
 #### Usage
 
-The typical usage pattern will be something like the following.  In the below example, we are finding those sentences (identified by Genia) that are contained in a ce:para XML element.  For more examples refer to the tests.
+The typical usage pattern will be something like the following.  In the below example, we are finding those sentences (identified by Genia) that are contained in a ce:para XML element.  For more examples refer to the tests.  We assume the AnnotationQueryPython wheel or egg has been installed.
 
 ```
+from AQPython.Query import *
+from AQPython.Utilities import *
+import pyspark
+from pyspark.storagelevel import StorageLevel
+
 # Get a SparkSession
 spark = pyspark.sql.SparkSession.builder.getOrCreate()
 
