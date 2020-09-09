@@ -1,2 +1,16 @@
 
 .DS_Store
+*.pyc
+AnnotationQueryPython.egg-info/dependency_links.txt
+AnnotationQueryPython.egg-info/PKG-INFO
+AnnotationQueryPython.egg-info/SOURCES.txt
+AnnotationQueryPython.egg-info/top_level.txt
+AnnotationQueryPython_spark3.egg-info/dependency_links.txt
+AnnotationQueryPython_spark3.egg-info/PKG-INFO
+AnnotationQueryPython_spark3.egg-info/SOURCES.txt
+AnnotationQueryPython_spark3.egg-info/top_level.txt
+build/lib/AQPython/__init__.py
+build/lib/AQPython/Annotation.py
+build/lib/AQPython/Concordancers.py
+build/lib/AQPython/Query.py
+build/lib/AQPython/Utilities.py

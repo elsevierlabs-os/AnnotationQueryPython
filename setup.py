@@ -12,8 +12,8 @@ with open('LICENSE.md') as f:
     license = f.read()
 
 setup(
-    name='AnnotationQueryPython',
-    version='1.0.2',
+    name='AnnotationQueryPython-spark3',
+    version='1.0.3',
     description='Python implementation for AnnotationQuery',
     long_description=readme,
     author='Darin McBeath',
