@@ -6,6 +6,7 @@ from pyspark.sql.types import *
 from pyspark.sql import SparkSession
 from urllib.parse import quote_plus
 from urllib.parse import unquote_plus
+from AQPython.Annotation import *
 
 spark = SparkSession.builder.getOrCreate()
 
@@ -126,64 +127,60 @@ def Hydrate(df, txtPath, excludes=True):
   Returns:
     Dataframe of AQAnnotations
   """
+  def hydrate(partition,txtPath,excludes):
 
-  def HydrateText(docId, startOffset, endOffset, properties, txtPath, excludes):
-  
-    # Read in the text for the document (want to think about ways for improving performance)
+    results = []
     docText = ''
-    text = ''
-  
-    # Check if file already has been read (written to tmp space)
-    if os.path.exists('/tmp/' + docId):
-      with io.open('/tmp/' + docId,'r',encoding='utf-8') as f:
-        docText = f.read()
-    else:
-      try:
-        with io.open(txtPath + docId,'r',encoding='utf-8') as f:
-          docText = f.read()
-        with io.open('/tmp/' + docId,'w',encoding='utf-8') as f:
-          f.write(docText)
-      except Exception as ex:
-        print(ex)
-        docText=""
-    
-    # Return properties if docText was empty or 'text' is already defined in the properties
-    if (docText == '') or ((properties != None) and ('text' in properties)):
-      return properties
-    else:
-      if (excludes) and (properties != None) and ('excludes' in properties) and (len(properties['excludes']) > 0):
-        excludes = []
-        exToks = []
-        for excludesEntry in properties['excludes'].split("|"):
-          toks = excludesEntry.split(",")  
-          excludes.append((int(toks[0]),toks[1],toks[2],int(toks[3]),int(toks[4])))
-        excludes = list(set(excludes))
-        for exclude in excludes:
-          exToks.append((exclude[3],exclude[4]))
-        exToks = list(set(exToks))
-        exToks.sort(key=lambda tup: (tup[0], tup[1]))
-        curOffset = startOffset
-        for exTok in exToks:
-          if exTok[0] <= curOffset:
-            curOffset = exTok[1]
-          else:
-            text = text + docText[curOffset:exTok[0]]
-            curOffset = exTok[1]
-        if curOffset < endOffset:
-          text = text + docText[curOffset:endOffset]
-        
-      else:
-        text = docText[startOffset:endOffset]
-    
-      if properties != None:
-        properties['text'] = text
-      else:
-        properties = {}
-        properties['text'] = text
-      return properties
-  
-  HydrateTextUDF = udf(HydrateText,MapType(StringType(),StringType()))
+    lastDoc = ''
 
-  hydratedf = df.sortWithinPartitions('docId') \
-                .withColumn('properties', HydrateTextUDF(col('docId'),col('startOffset'),col('endOffset'),col('properties'),lit(txtPath),lit(excludes)))
-  return hydratedf
+    for rec in partition:
+      text = ''
+      if lastDoc != rec.docId:
+        try:
+          lastDoc = rec.docId
+          with io.open(txtPath + rec.docId,'r',encoding='utf-8') as f:
+            docText = f.read()
+        except Exception as ex:
+          print(ex)
+          docText = ''
+
+      # Return properties if docText was empty or 'text' is already defined in the properties
+      if (docText == '') or ((rec.properties != None) and ('text' in rec.properties)):
+        results.append([rec.docId,rec.annotSet,rec.annotType,rec.startOffset,rec.endOffset,rec.annotId,rec.properties])
+
+      else:
+        if (excludes) and (rec.properties != None) and ('excludes' in rec.properties) and (len(rec.properties['excludes']) > 0):
+          excludes = []
+          exToks = []
+          for excludesEntry in rec.properties['excludes'].split("|"):
+            toks = excludesEntry.split(",")  
+            excludes.append((int(toks[0]),toks[1],toks[2],int(toks[3]),int(toks[4])))
+          excludes = list(set(excludes))
+          for exclude in excludes:
+            exToks.append((exclude[3],exclude[4]))
+          exToks = list(set(exToks))
+          exToks.sort(key=lambda tup: (tup[0], tup[1]))
+          curOffset = rec.startOffset
+          for exTok in exToks:
+            if exTok[0] <= curOffset:
+              curOffset = exTok[1]
+            else:
+              text = text + docText[curOffset:exTok[0]]
+              curOffset = exTok[1]
+          if curOffset < rec.endOffset:
+            text = text + docText[curOffset:rec.endOffset]
+        
+        else:
+          text = docText[rec.startOffset:rec.endOffset]
+
+        properties = {}
+        if rec.properties != None:
+          for key in rec.properties:
+            properties[key] = rec.properties[key]
+        properties['text'] = text
+        results.append([rec.docId,rec.annotSet,rec.annotType,rec.startOffset,rec.endOffset,rec.annotId,properties])
+
+    return iter(results)
+
+  hydratedRDD = df.sortWithinPartitions('docId').rdd.mapPartitions(lambda partition: hydrate(partition,txtPath,excludes))
+  return spark.createDataFrame(hydratedRDD.map(lambda x: x),AQSchema())
