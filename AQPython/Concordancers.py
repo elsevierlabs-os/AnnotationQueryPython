@@ -3,14 +3,20 @@ import builtins
 import io
 from urllib.parse import unquote_plus
 
-def _buildTableEntry(docId, annotSet, annotType, beforeText, text, afterText):
+def _buildTableEntry(docId, annotSet, annotType, beforeText, text, afterText, offset):
+  sab = ""
+  eab = ""
+  if offset != 0:
+    sab = "<font color='green'> &gt; </font>"
+    eab = "<font color='green'> &lt; </font>"
+  
   return ("<tr><td>" + docId + "</td>" + 
           "<td>" + annotSet  +"</td>" + 
           "<td>" + annotType + "</td><td><div style='word-break:break-all;'>" + 
           beforeText + 
-          "<font color='green'> &gt; </font>" + 
+          sab + 
           text + 
-          "<font color='green'> &lt; </font>"  + 
+          eab  + 
           afterText + 
           "</div></td></tr>")
 
@@ -121,7 +127,8 @@ def Concordancer(results, textMnt, nrows=10, offset=0, highlightAnnotations=None
                                       annot.annotType, 
                                       docText[builtins.max([0,annot.startOffset - offset]):annot.startOffset],
                                       modText,
-                                      docText[annot.endOffset:builtins.min([len(docText),annot.endOffset + offset])]))
+                                      docText[annot.endOffset:builtins.min([len(docText),annot.endOffset + offset])],
+                                      offset))
 
     except Exception as ex:
       print(ex)
@@ -265,7 +272,8 @@ def XMLConcordancer(results, textMnt, om, nrows=10, offset=0, highlightAnnotatio
                                       annot.annotType,
                                       docText[builtins.max([0,annot.startOffset - offset]):annot.startOffset],
                                       modText,
-                                      docText[annot.endOffset:builtins.min([len(docText),annot.endOffset + offset])]))
+                                      docText[annot.endOffset:builtins.min([len(docText),annot.endOffset + offset])],
+                                      offset))
 
     except Exception as ex:
       print(ex)
