@@ -280,6 +280,66 @@ def ContainedIn(left, right, limit=0, negate=False):
   return results
 
 
+def ContainedInList(left, right):
+  """Provide the ability to find annotations that are contained by another annotation.  
+  The input is 2 Dataframes of AQAnnotations.  We will call them A and B.  
+  The purpose is to find those annotations in A that are contained in B.  What that means is the start/end offset for an annotation from A  must be contained by the start/end offset from an annotation in  B.  
+  We of course have to also match on the document id.  
+  We ultimately return a Dataframe with 2 fields where the first field is an annotation from B and the second field is an array of entries from A
+  that are contained in the first entry.   
+
+  Args:
+  left: Dataframe of AQAnnotations, the ones we will return (as a list) if they are contained in AQAnnotations from 'right'.
+  right: Dataframe of AQAnnotations, the ones we are looking to see if they contain AQAnnotations from 'left'.
+  
+  Returns:
+    Dataframe of (AQAnnotations,Array[AQAnnotations])
+  """
+
+  def containedAQ(rec):
+    # Sort the contained annotations 
+    srecs = sorted(rec[1], key=lambda x: (-1 if x.LendOffset == None else x.LendOffset),reverse=True)
+
+    # We can extract the key from the any 'right' entry in sorted recs (we will use the first one)
+    key = Row(docId = srecs[0].RdocId,
+              annotSet = srecs[0].RannotSet,
+              annotType = srecs[0].RannotType,
+              startOffset = int(srecs[0].RstartOffset),
+              endOffset = int(srecs[0].RendOffset),
+              annotId = int(srecs[0].RannotId),
+              properties = srecs[0].Rproperties)
+
+    # Construct the array
+    values = []
+    for rec in srecs:
+      if rec.LdocId != None:
+        values.append(Row(docId = rec.LdocId,
+                          annotSet = rec.LannotSet,
+                          annotType = rec.LannotType,
+                          startOffset = int(rec.LstartOffset),
+                          endOffset = int(rec.LendOffset),
+                          annotId = int(rec.LannotId),
+                          properties = rec.Lproperties))
+    return(key,values)  
+
+  l = left.select("annotId","annotSet","annotType","docId","endOffset","properties","startOffset").toDF("LannotId","LannotSet","LannotType","LdocId","LendOffset","Lproperties","LstartOffset")
+  r = right.select("annotId","annotSet","annotType","docId","endOffset","properties","startOffset").toDF("RannotId","RannotSet","RannotType","RdocId","RendOffset","Rproperties","RstartOffset")
+
+  results = l.join(r,
+                   ((col("LdocId") == col("RdocId")) &
+                    (col("LstartOffset") >= col("RstartOffset")) &
+                    (col("LendOffset") <= col("RendOffset")) &
+                    (~((col("LannotSet") == col("RannotSet")) &
+                      (col("LannotType") == col("RannotType")) &
+                      (col("LstartOffset") == col("RstartOffset")) &
+                      (col("LendOffset") == col("RendOffset")))))) \
+                    .rdd \
+                    .groupBy(lambda x: (x["RdocId"],x["RstartOffset"],x["RendOffset"])) \
+                    .map(lambda rec: containedAQ(rec))
+
+  return spark.createDataFrame(results.map(lambda x: x),AQSchemaList())
+  
+
 def Before(left, right, dist=sys.maxsize , limit=0, negate=False):
   """Provide the ability to find annotations that are before another annotation.
 

@@ -98,6 +98,31 @@ class QueryTestSuite(unittest.TestCase):
     def test_ContainedIn2(self):
         self.assertEquals(2,ContainedIn(FilterType(self.annots, "sentence"), FilterType(self.annots, "ce:para"), negate = True).count())       
 
+    # Test ContainedInList
+    def test_ContainedInList1(self):
+        result = ContainedInList(FilterProperty(self.annots,'orig','polynomial'),FilterType(self.annots, 'sentence')) \
+                 .collect()
+        sortedResults =  sorted(result, key=lambda tup: (tup[0]["startOffset"],tup[0]["endOffset"]))
+        self.assertEquals(1, len(sortedResults[0][1]))
+        self.assertEquals(Row(annotId=1, annotSet='ge', annotType='sentence', docId='S0022314X13001777', endOffset=18607, properties={}, startOffset=18546),
+                          Row(annotId=sortedResults[0][0].annotId,
+                              annotSet=sortedResults[0][0].annotSet,
+                              annotType=sortedResults[0][0].annotType,
+                              docId=sortedResults[0][0].docId,
+                              endOffset=sortedResults[0][0].endOffset,
+                              properties=sortedResults[0][0].properties,
+                              startOffset=sortedResults[0][0].startOffset))  
+        self.assertEquals(Row(annotId=7, annotSet='ge', annotType='word', docId='S0022314X13001777', endOffset=18574, properties={'lemma': 'polynomial', 'orig': 'polynomial', 'pos': 'jj'}, startOffset=18564),
+                          Row(annotId=sortedResults[0][1][0].annotId,
+                              annotSet=sortedResults[0][1][0].annotSet,
+                              annotType=sortedResults[0][1][0].annotType,
+                              docId=sortedResults[0][1][0].docId,
+                              endOffset=sortedResults[0][1][0].endOffset,
+                              properties=sortedResults[0][1][0].properties,
+                              startOffset=sortedResults[0][1][0].startOffset))
+
+                             
+
     # Test Before
     def test_Before1(self):
         self.assertEquals(47,Before(FilterProperty(self.annots, "orig", "polynomial"), FilterProperty(self.annots, "orig", "function")).count())       

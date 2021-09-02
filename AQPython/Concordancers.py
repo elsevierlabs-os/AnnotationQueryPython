@@ -29,7 +29,7 @@ def _buildHTML(text):
     return "<html><body><table border='1' style='font-family: monospace;table-layout: fixed;'>" + text + "</table></body></html>"   
 
 
-def Concordancer(results, textMnt, nrows=10, offset=0, highlightAnnotations=None):
+def Concordancer(results, textMnt, nrows=10, offset=0, highlightAnnotations=None, colorPropertyKey="", colorMap={}):
   """Output HTML for the text identified by the AQAnnotation and highlight in 'red' the text that was ignored (excluded).
 
   Args:
@@ -38,7 +38,8 @@ def Concordancer(results, textMnt, nrows=10, offset=0, highlightAnnotations=None
     nrows: Number of results to display
     offset: Number of characters before/after each annotation in results to display
     highlightAnnotations: Dataframe of AQAnnotations that you would like to highlight in the results
-
+    colorPropertyKey: Key in the property map of highlightAnnotations to get the value for the color lookup in the specified colorMap
+    colorMap: Map the colorPropertyKey value to the specified color in the Map.  Default is blue when not found.
   Returns:
     HTML
 
@@ -74,7 +75,10 @@ def Concordancer(results, textMnt, nrows=10, offset=0, highlightAnnotations=None
       if highlightTokens != None:
         hlTokens = [ hlToken for hlToken in highlightTokens if hlToken.docId == annot.docId and hlToken.startOffset >= annot.startOffset and hlToken.endOffset <= annot.endOffset ]
         for hlToken in hlTokens:
-          hlToks.append((hlToken.startOffset,hlToken.startOffset,"hl", "<font color='blue'>"))
+          hlColor = 'blue'
+          if (hlToken.properties != None) and (colorPropertyKey in hlToken.properties):
+            hlColor = colorMap.get(hlToken.properties[colorPropertyKey], 'blue')
+          hlToks.append((hlToken.startOffset,hlToken.startOffset,"hl", "<font color='" + hlColor + "'>"))
           hlToks.append((hlToken.endOffset,hlToken.endOffset,"hl", "</font>")) 
       
       # Process the excludeTokens
