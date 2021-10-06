@@ -13,7 +13,7 @@ with open('LICENSE.md') as f:
 
 setup(
     name='AnnotationQueryPython-spark3',
-    version='1.0.5',
+    version='1.0.6',
     description='Python implementation for AnnotationQuery',
     long_description=readme,
     author='Darin McBeath',

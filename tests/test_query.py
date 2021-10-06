@@ -121,8 +121,6 @@ class QueryTestSuite(unittest.TestCase):
                               properties=sortedResults[0][1][0].properties,
                               startOffset=sortedResults[0][1][0].startOffset))
 
-                             
-
     # Test Before
     def test_Before1(self):
         self.assertEquals(47,Before(FilterProperty(self.annots, "orig", "polynomial"), FilterProperty(self.annots, "orig", "function")).count())       
@@ -307,5 +305,32 @@ class QueryTestSuite(unittest.TestCase):
                               properties=sortedResults[0][1][2].properties,
                               startOffset=sortedResults[0][1][2].startOffset))    
 
+    def test_TokensSpan(self):
+        result = TokensSpan(FilterType(self.annots,"word"),FilterType(self.annots,"sentence"),"orig").collect()
+        sortedResults =  sorted(result, key=lambda rec: (rec.docId,rec.startOffset))   
+        self.assertEquals(128,len(sortedResults)) 
+        self.assertEquals(Row(annotId=1, annotSet='ge', annotType='sentence', docId='S0022314X13001777', endOffset=18607, properties={'origToksEpos' : '5|18551 14|18560 17|18563 28|18574 41|18587 44|18590 48|18594 57|18603 61|18607', 'origToksSpos' : '0|18546 6|18552 15|18561 18|18564 29|18575 42|18588 45|18591 49|18595 58|18604', 'origToksStr': 'Sylow p-groups of polynomial permutations on the integers mod'},startOffset=18546),
+                          Row(annotId=sortedResults[0].annotId,
+                              annotSet=sortedResults[0].annotSet,
+                              annotType=sortedResults[0].annotType,
+                              docId=sortedResults[0].docId,
+                              endOffset=sortedResults[0].endOffset,
+                              properties=sortedResults[0].properties,
+                              startOffset=sortedResults[0].startOffset))    
+
+    def test_RegexTokensSpan(self):
+        tokensSpan = TokensSpan(FilterType(self.annots,"word"),FilterType(self.annots,"sentence"),"orig")
+        result = RegexTokensSpan(tokensSpan,"orig",r"(?i)(?<= |^)poly[a-z]+ perm[a-z]+(?= |$$)","newSet","newType").collect()
+        sortedResults =  sorted(result, key=lambda rec: (rec.docId,rec.startOffset)) 
+        self.assertEquals(18,len(sortedResults))
+        self.assertEquals(Row(annotId=1, annotSet='newSet', annotType='newType', docId='S0022314X13001777', endOffset=18587, properties={'origMatch': 'polynomial permutations'}, startOffset=18564),
+                         Row(annotId=sortedResults[0].annotId,
+                              annotSet=sortedResults[0].annotSet,
+                              annotType=sortedResults[0].annotType,
+                              docId=sortedResults[0].docId,
+                              endOffset=sortedResults[0].endOffset,
+                              properties=sortedResults[0].properties,
+                              startOffset=sortedResults[0].startOffset))
+            
 if __name__ == "__main__":
     unittest.main()

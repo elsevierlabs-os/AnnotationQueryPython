@@ -1,3 +1,4 @@
 pyspark==3.0.0
+regex
 psutil
 nose
